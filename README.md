@@ -5,7 +5,8 @@ Simulación de Av. Garza Sada con X número de estaciones, Y número de pasajero
 El objetivo es con diferentes parámetros, ver los posibles resultados para poder tomar una decisión de cuántas estaciones y capacidad de metro es la mejor para implementar en la Línea 5 del metro que pasará por Distrito Tec. 
 
 Proyecto creado por: 
-- José Carlos Zertuche
+
+- José Carlos Zertuche  
 - Gustavo Lucio
 - Alan Isaac García
 - Demetrio Strimpopulos

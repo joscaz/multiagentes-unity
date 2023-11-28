@@ -1,12 +1,14 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Networking;
 
 [System.Serializable]
 public class PositionData
 {
+    public bool a_bordo;
     public string id;
-    public int[] position;
+    public int[] pos;
 }
 
 [System.Serializable]
@@ -16,9 +18,11 @@ public class Step
 }
 
 [System.Serializable]
-public class Steps
+public class StepsContainer
 {
+    public int capacity;
     public List<Step> steps;
+
 }
 
 public class MovimientoPasajeros : MonoBehaviour
@@ -26,54 +30,113 @@ public class MovimientoPasajeros : MonoBehaviour
     public GameObject prefabPasajero;
     public GameObject prefabMetro;
     public GameObject prefabEstacion;
+    public float speed = 5f;
+    public TMPro.TextMeshPro capacityText;
+    public CameraFollow cameraFollowScript;
 
-    private Steps allSteps;
     private Dictionary<string, GameObject> instantiatedObjects = new Dictionary<string, GameObject>();
 
     void Start()
     {
-        TextAsset jsonFile = Resources.Load<TextAsset>("transformed_sample_new");
-        if (jsonFile != null)
+        StartCoroutine(GetStepData(0)); // Iniciar con el paso 0
+    }
+
+    IEnumerator GetStepData(int stepNumber)
+    {
+        string url = "http://127.0.0.1:5000/getSteps/" + stepNumber.ToString();
+        UnityWebRequest request = UnityWebRequest.Get(url);
+        yield return request.SendWebRequest();
+
+
+        if (request.result == UnityWebRequest.Result.ConnectionError || request.result == UnityWebRequest.Result.ProtocolError)
         {
-            allSteps = JsonUtility.FromJson<Steps>(jsonFile.text);
-            if (allSteps != null && allSteps.steps != null)
+            if (request.responseCode == 500)
             {
-                StartCoroutine(UpdatePositions());
+                Debug.Log("Fin de los pasos.");
             }
             else
             {
-                Debug.LogError("Error al deserializar el JSON");
+                Debug.LogError("Error al obtener datos: " + request.error);
             }
         }
         else
         {
-            Debug.LogError("No se encontró el archivo JSON");
+            StepsContainer stepsContainer = JsonUtility.FromJson<StepsContainer>(request.downloadHandler.text);
+            if (stepsContainer.steps != null && stepsContainer.steps.Count > 0)
+            {
+                capacityText.text = "Capacidad: " + stepsContainer.capacity; // Actualizar TextMeshPro
+                Debug.Log("Capacidad en el paso " + stepNumber + ": " + stepsContainer.capacity);
+                yield return StartCoroutine(UpdatePositions(stepsContainer.steps[0]));
+                StartCoroutine(GetStepData(stepNumber + 1)); // Siguiente paso
+            }
+            else
+            {
+                Debug.LogError("No se encontraron posiciones en el paso: " + stepNumber);
+            }
         }
     }
 
-
-    IEnumerator UpdatePositions()
+    IEnumerator UpdatePositions(Step step)
     {
-        foreach (Step step in allSteps.steps)
+        foreach (PositionData posData in step.positions)
         {
-            foreach (PositionData posData in step.positions)
+            Vector3 newPosition = new Vector3(posData.pos[0], 2, posData.pos[1]);
+
+            if (!instantiatedObjects.ContainsKey(posData.id))
             {
-                // Cambiar la segunda coordenada para que sea en el eje Z en lugar de Y
-                Vector3 position = new Vector3(posData.position[0], 2, posData.position[1]);
-                if (!instantiatedObjects.ContainsKey(posData.id))
+                GameObject prefab = GetPrefab(posData.id);
+                if (prefab != null)
                 {
-                    GameObject prefab = GetPrefab(posData.id);
-                    instantiatedObjects[posData.id] = Instantiate(prefab, position, Quaternion.identity);
+                    GameObject instantiatedObject = Instantiate(prefab, newPosition, Quaternion.identity);
+                    instantiatedObjects.Add(posData.id, instantiatedObject);
+                    instantiatedObject.SetActive(true);
+                    if (posData.id.StartsWith("Brt") && cameraFollowScript != null)
+                    {
+                        cameraFollowScript.SetTarget(instantiatedObject.transform);
+                    }
                 }
                 else
                 {
-                    instantiatedObjects[posData.id].transform.position = position;
+                    Debug.LogError("Prefab no encontrado para ID: " + posData.id);
                 }
             }
-            yield return new WaitForSeconds(1/2f); // Espera 1 segundo antes de pasar al siguiente paso
+            else
+            {
+                GameObject obj = instantiatedObjects[posData.id];
+
+                // Activar el objeto antes de moverlo a la nueva posición
+                if (posData.id.StartsWith("pasajero"))
+                {
+                    obj.SetActive(!posData.a_bordo);
+                }
+
+                if (obj.activeSelf)
+                {
+                    obj.transform.position = newPosition;
+                }
+
+                StartCoroutine(MoveToPosition(posData.id, newPosition));
+            }
         }
+        yield return new WaitForSeconds(1 / 4f); // Tiempo entre pasos
     }
 
+
+    IEnumerator MoveToPosition(string id, Vector3 newPosition)
+    {
+        if (instantiatedObjects.ContainsKey(id))
+        {
+            GameObject obj = instantiatedObjects[id];
+
+            while (Vector3.Distance(obj.transform.position, newPosition) > 0.01f)
+            {
+                // Mover el objeto hacia la nueva posición a una velocidad constante
+                obj.transform.position = Vector3.MoveTowards(obj.transform.position, newPosition, speed * Time.deltaTime);
+
+                yield return null; // Espera hasta el siguiente frame antes de continuar
+            }
+        }
+    }
 
 
     private GameObject GetPrefab(string id)

@@ -11,4 +11,4 @@ Proyecto creado por:
 - Alan Isaac García
 - Demetrio Strimpopulos
 
-El link al sistema multiagentes creado en Mesa framework de python con una API hecha en Flask está en [este repositorio.]([https://duckduckgo.com](https://github.com/gusls02/Sistema-Multiagentes-API).
+El link al sistema multiagentes creado en Mesa framework de python con una API hecha en Flask está en [este repositorio.](https://github.com/gusls02/Sistema-Multiagentes-API).

@@ -32,7 +32,7 @@ public class MovimientoPasajeros : MonoBehaviour
 
     void Start()
     {
-        TextAsset jsonFile = Resources.Load<TextAsset>("transformed_sample");
+        TextAsset jsonFile = Resources.Load<TextAsset>("transformed_sample_new");
         if (jsonFile != null)
         {
             allSteps = JsonUtility.FromJson<Steps>(jsonFile.text);
@@ -59,7 +59,7 @@ public class MovimientoPasajeros : MonoBehaviour
             foreach (PositionData posData in step.positions)
             {
                 // Cambiar la segunda coordenada para que sea en el eje Z en lugar de Y
-                Vector3 position = new Vector3(posData.position[0], 1/2, posData.position[1]);
+                Vector3 position = new Vector3(posData.position[0], 2, posData.position[1]);
                 if (!instantiatedObjects.ContainsKey(posData.id))
                 {
                     GameObject prefab = GetPrefab(posData.id);
@@ -70,7 +70,7 @@ public class MovimientoPasajeros : MonoBehaviour
                     instantiatedObjects[posData.id].transform.position = position;
                 }
             }
-            yield return new WaitForSeconds(1f); // Espera 1 segundo antes de pasar al siguiente paso
+            yield return new WaitForSeconds(1/2f); // Espera 1 segundo antes de pasar al siguiente paso
         }
     }
 
@@ -78,18 +78,19 @@ public class MovimientoPasajeros : MonoBehaviour
 
     private GameObject GetPrefab(string id)
     {
-        if (id.StartsWith("pasajero"))
+        if (id.StartsWith("pasajero") && prefabPasajero != null)
         {
             return prefabPasajero;
         }
-        else if (id.StartsWith("brt"))
+        else if (id.StartsWith("Brt") && prefabMetro != null)
         {
             return prefabMetro;
         }
-        else if (id.StartsWith("estacion"))
+        else if (id.StartsWith("estacion") && prefabEstacion != null)
         {
             return prefabEstacion;
         }
+        Debug.LogError("Prefab no encontrado o no asignado para el ID: " + id);
         return null;
     }
 }

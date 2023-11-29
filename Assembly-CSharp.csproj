@@ -57,9 +57,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Assets/Scripts/PrefabSpawner.cs" />
+    <Compile Include="Assets/Scripts/CameraFollow.cs" />
     <Compile Include="Assets/Scripts/PrefabSpawnerReverse.cs" />
     <Compile Include="Assets/Scripts/MovimientoPasajeros.cs" />
-    <Compile Include="Assets/Scripts/CameraFollow.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Assets/TextMesh Pro/Shaders/TMPro.cginc" />

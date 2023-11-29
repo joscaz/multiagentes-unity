@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Networking;
 
+// Define la estructura de datos para cada posición de un objeto en el juego.
 [System.Serializable]
 public class PositionData
 {
@@ -11,12 +12,14 @@ public class PositionData
     public int[] pos;
 }
 
+// Define un paso, que consiste en una lista de posiciones.
 [System.Serializable]
 public class Step
 {
     public List<PositionData> positions;
 }
 
+// Contiene la capacidad total y una lista de pasos.
 [System.Serializable]
 public class StepsContainer
 {
@@ -27,6 +30,7 @@ public class StepsContainer
 
 public class MovimientoPasajeros : MonoBehaviour
 {
+    // Referencias a los prefabs utilizados en el juego.
     public GameObject prefabPasajero;
     public GameObject prefabMetro;
     public GameObject prefabEstacion;
@@ -34,20 +38,23 @@ public class MovimientoPasajeros : MonoBehaviour
     public TMPro.TextMeshPro capacityText;
     public CameraFollow cameraFollowScript;
 
+    // Diccionario para mantener un registro de todos los objetos instanciados.
     private Dictionary<string, GameObject> instantiatedObjects = new Dictionary<string, GameObject>();
 
     void Start()
     {
+        // Inicia la corutina para obtener datos del primer paso.
         StartCoroutine(GetStepData(0)); // Iniciar con el paso 0
     }
 
+    // Corutina para obtener datos de cada paso de la API.
     IEnumerator GetStepData(int stepNumber)
     {
         string url = "http://127.0.0.1:5000/getSteps/" + stepNumber.ToString();
         UnityWebRequest request = UnityWebRequest.Get(url);
         yield return request.SendWebRequest();
 
-
+        // Maneja la respuesta de la API.
         if (request.result == UnityWebRequest.Result.ConnectionError || request.result == UnityWebRequest.Result.ProtocolError)
         {
             if (request.responseCode == 500)
@@ -61,6 +68,7 @@ public class MovimientoPasajeros : MonoBehaviour
         }
         else
         {
+            // Deserializa y procesa los datos recibidos.
             StepsContainer stepsContainer = JsonUtility.FromJson<StepsContainer>(request.downloadHandler.text);
             if (stepsContainer.steps != null && stepsContainer.steps.Count > 0)
             {
@@ -76,6 +84,7 @@ public class MovimientoPasajeros : MonoBehaviour
         }
     }
 
+    // Actualiza las posiciones de los objetos en cada paso.
     IEnumerator UpdatePositions(Step step)
     {
         foreach (PositionData posData in step.positions)
@@ -84,12 +93,15 @@ public class MovimientoPasajeros : MonoBehaviour
 
             if (!instantiatedObjects.ContainsKey(posData.id))
             {
+                // Instanciación y configuración inicial de objetos.
                 GameObject prefab = GetPrefab(posData.id);
                 if (prefab != null)
                 {
                     GameObject instantiatedObject = Instantiate(prefab, newPosition, Quaternion.identity);
                     instantiatedObjects.Add(posData.id, instantiatedObject);
                     instantiatedObject.SetActive(true);
+
+                    // Si es un metro, establece como objetivo de la cámara.
                     if (posData.id.StartsWith("Brt") && cameraFollowScript != null)
                     {
                         cameraFollowScript.SetTarget(instantiatedObject.transform);
@@ -102,6 +114,7 @@ public class MovimientoPasajeros : MonoBehaviour
             }
             else
             {
+                // Actualizar la posición y visibilidad de objetos existentes.
                 GameObject obj = instantiatedObjects[posData.id];
 
                 // Activar el objeto antes de moverlo a la nueva posición
@@ -118,27 +131,33 @@ public class MovimientoPasajeros : MonoBehaviour
                 StartCoroutine(MoveToPosition(posData.id, newPosition));
             }
         }
-        yield return new WaitForSeconds(1 / 4f); // Tiempo entre pasos
+        yield return new WaitForSeconds(1/32f); // Tiempo entre pasos
     }
 
-
+    // Mueve los objetos hacia una nueva posición de forma suave.
     IEnumerator MoveToPosition(string id, Vector3 newPosition)
     {
         if (instantiatedObjects.ContainsKey(id))
         {
             GameObject obj = instantiatedObjects[id];
+            float journeyLength = Vector3.Distance(obj.transform.position, newPosition);
+            float startTime = Time.time;
 
-            while (Vector3.Distance(obj.transform.position, newPosition) > 0.01f)
+            // Animación suave hacia la nueva posición.
+            while (Time.time < startTime + (journeyLength / speed))
             {
-                // Mover el objeto hacia la nueva posición a una velocidad constante
-                obj.transform.position = Vector3.MoveTowards(obj.transform.position, newPosition, speed * Time.deltaTime);
-
-                yield return null; // Espera hasta el siguiente frame antes de continuar
+                float distanceCovered = (Time.time - startTime) * speed;
+                float fractionOfJourney = distanceCovered / journeyLength;
+                obj.transform.position = Vector3.Lerp(obj.transform.position, newPosition, fractionOfJourney);
+                yield return null;
             }
+
+            obj.transform.position = newPosition;
         }
     }
 
 
+    // Devuelve el prefab correspondiente según el ID.
     private GameObject GetPrefab(string id)
     {
         if (id.StartsWith("pasajero") && prefabPasajero != null)

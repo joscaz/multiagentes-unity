@@ -11719,7 +11719,7 @@ MonoBehaviour:
   prefabPasajero: {fileID: 6437131200056446590, guid: 20506b79114fb4a1f8389229e0b7100a, type: 3}
   prefabMetro: {fileID: 7341957467104482770, guid: 51c98cdfa593946eb8938420662f39bc, type: 3}
   prefabEstacion: {fileID: 3733952345001871429, guid: 175e8deeb30979b43941397c224cc900, type: 3}
-  speed: 10
+  speed: 1
   capacityText: {fileID: 1189941726}
   cameraFollowScript: {fileID: 963194229}
 --- !u!4 &1215558940
